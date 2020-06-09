@@ -1,4 +1,4 @@
-module edriver
+module github.com/kevin-zx/edriver
 
 go 1.14
 
