@@ -1,4 +1,4 @@
-package mywebdriver
+package edriver
 
 import (
 	"fmt"
