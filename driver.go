@@ -131,3 +131,34 @@ func (myWd *EChromeDriver) CloseOtherWindows() error {
 	}
 	return nil
 }
+
+// FindElementAndWait: This method will attempt to find the particularized element by CSS selector,
+// when find failed, sleep 1 second and retry until found element or wait time out
+// cssSelector: css selector
+// waitSecond: wait second, if the progress overruns the time limit, it will break and return an error,
+// but this second isn't precise because to find the element itself also cost time.
+//
+func (myWd *EChromeDriver) FindElementAndWait(cssSelector string, waitSecond int) (selenium.WebElement, error) {
+	webE, err := myWd.FindElement(selenium.ByCSSSelector, cssSelector)
+	for i := 0; i < waitSecond; i++ {
+		if err == nil && webE != nil {
+			break
+		}
+		webE, err = myWd.FindElement(selenium.ByCSSSelector, cssSelector)
+		time.Sleep(1*time.Second)
+	}
+	return webE, err
+
+}
+func (myWd *EChromeDriver) FindElementsAndWait(cssSelector string, waitSecond int) ([]selenium.WebElement, error) {
+	webElements, err := myWd.FindElements(selenium.ByCSSSelector, cssSelector)
+	for i := 0; i < waitSecond; i++ {
+		if err == nil && webElements != nil {
+			break
+		}
+		webElements, err = myWd.FindElements(selenium.ByCSSSelector, cssSelector)
+		time.Sleep(1*time.Second)
+	}
+	return webElements, err
+
+}
