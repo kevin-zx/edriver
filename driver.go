@@ -5,6 +5,7 @@ import (
 	"github.com/tebeka/selenium"
 	"github.com/tebeka/selenium/chrome"
 	"github.com/tebeka/selenium/log"
+	"path/filepath"
 	"time"
 )
 
@@ -12,6 +13,7 @@ type EChromeDriver struct {
 	selenium.WebDriver
 	userAgent     string
 	disableWindow bool
+	userDataDir   string
 }
 type DeviceName string
 
@@ -31,20 +33,29 @@ const (
 // UserAgent: specify User-agent, if User-agent is empty use chrome default User-agent
 // enableLog: enableLog can enable performance log you can use it to intercept requests, but can't intercept response (or I can't), default false
 // disableWindow: if true will set --headless argument to chrome Capabilities chrome will running in the background
+// userDataDir: this param to specify a dir to keep chrome data include cookies, caches ... , if it's empty selenium will user temp dir to keep those data. And where we quit the driver, the dir can't be found back. default is an empty string
 // ps. this function has too many params, maybe can implement by options mode, maybe I'll do it
-func NewChromeWebDriver(servicePort int, proxy string, mobileDeviceName DeviceName, UserAgent string, enableLog bool, disableWindow bool) (EChromeDriver, error) {
-	wdu := EChromeDriver{}
+func NewChromeWebDriver(servicePort int, proxy string, mobileDeviceName DeviceName, UserAgent string, enableLog bool, disableWindow bool,userDataDir string) (*EChromeDriver, error) {
+	wdu := &EChromeDriver{}
+	wdu.userAgent = UserAgent
+	wdu.disableWindow = disableWindow
+	if userDataDir != "" && !filepath.IsAbs(userDataDir) {
+		absUserDataDir, err := filepath.Abs(userDataDir)
+		if err != nil {
+			return nil, fmt.Errorf("can't convert userDataDir to absolute path, userDataDir: %s, errinfo:%s", userDataDir, err.Error())
+		}
+		userDataDir = absUserDataDir
+	}
+	wdu.userDataDir = userDataDir
 	err := wdu.createWebDriver(servicePort, proxy, mobileDeviceName, enableLog)
 	if err != nil {
 		wdu.QuitDriver()
+		return nil,err
 	}
-	wdu.userAgent = UserAgent
-	wdu.disableWindow = disableWindow
 	return wdu, err
 }
 
 func (myWd *EChromeDriver) createWebDriver(servicePort int, proxy string, mobileDeviceName DeviceName, enableLog bool) (err error) {
-
 	caps := selenium.Capabilities{
 		"browserName": "chrome",
 	}
@@ -70,6 +81,11 @@ func (myWd *EChromeDriver) createWebDriver(servicePort int, proxy string, mobile
 		c.PerfLoggingPrefs = &chrome.PerfLoggingPreferences{
 			EnableNetwork: &EnableNetworkFlg,
 		}
+	}
+	if myWd.userDataDir != "" {
+		//c.Prefs["userDataDir"] = myWd.userDataDir
+		//caps["chrome"] = map[string]string{"userDataDir":myWd.userDataDir}
+		c.Args = append(c.Args, "user-data-dir="+myWd.userDataDir)
 	}
 	if mobileDeviceName != "" {
 		c.MobileEmulation = &chrome.MobileEmulation{
