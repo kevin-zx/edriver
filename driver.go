@@ -35,7 +35,7 @@ const (
 // disableWindow: if true will set --headless argument to chrome Capabilities chrome will running in the background
 // userDataDir: this param to specify a dir to keep chrome data include cookies, caches ... , if it's empty selenium will user temp dir to keep those data. And where we quit the driver, the dir can't be found back. default is an empty string
 // ps. this function has too many params, maybe can implement by options mode, maybe I'll do it
-func NewChromeWebDriver(servicePort int, proxy string, mobileDeviceName DeviceName, UserAgent string, enableLog bool, disableWindow bool,userDataDir string) (*EChromeDriver, error) {
+func NewChromeWebDriver(servicePort int, proxy string, mobileDeviceName DeviceName, UserAgent string, enableLog bool, disableWindow bool, userDataDir string) (*EChromeDriver, error) {
 	wdu := &EChromeDriver{}
 	wdu.userAgent = UserAgent
 	wdu.disableWindow = disableWindow
@@ -50,7 +50,7 @@ func NewChromeWebDriver(servicePort int, proxy string, mobileDeviceName DeviceNa
 	err := wdu.createWebDriver(servicePort, proxy, mobileDeviceName, enableLog)
 	if err != nil {
 		wdu.QuitDriver()
-		return nil,err
+		return nil, err
 	}
 	return wdu, err
 }
@@ -132,24 +132,12 @@ func (myWd *EChromeDriver) CloseOtherWindows() error {
 	return nil
 }
 
-// FindElementAndWait: This method will attempt to find the particularized element by CSS selector,
+// FindElementsAndWait: This method will attempt to find the particularized elements by CSS selector,
 // when find failed, sleep 1 second and retry until found element or wait time out
 // cssSelector: css selector
 // waitSecond: wait second, if the progress overruns the time limit, it will break and return an error,
 // but this second isn't precise because to find the element itself also cost time.
 //
-func (myWd *EChromeDriver) FindElementAndWait(cssSelector string, waitSecond int) (selenium.WebElement, error) {
-	webE, err := myWd.FindElement(selenium.ByCSSSelector, cssSelector)
-	for i := 0; i < waitSecond; i++ {
-		if err == nil && webE != nil {
-			break
-		}
-		webE, err = myWd.FindElement(selenium.ByCSSSelector, cssSelector)
-		time.Sleep(1*time.Second)
-	}
-	return webE, err
-
-}
 func (myWd *EChromeDriver) FindElementsAndWait(cssSelector string, waitSecond int) ([]selenium.WebElement, error) {
 	webElements, err := myWd.FindElements(selenium.ByCSSSelector, cssSelector)
 	for i := 0; i < waitSecond; i++ {
@@ -157,8 +145,20 @@ func (myWd *EChromeDriver) FindElementsAndWait(cssSelector string, waitSecond in
 			break
 		}
 		webElements, err = myWd.FindElements(selenium.ByCSSSelector, cssSelector)
-		time.Sleep(1*time.Second)
+		time.Sleep(1 * time.Second)
 	}
 	return webElements, err
 
+}
+
+// same to FindElementsAndWait instead of only need one element
+func (myWd *EChromeDriver) FindElementAndWait(cssSelector string, waitSecond int) (selenium.WebElement, error) {
+	elements, err := myWd.FindElementsAndWait(cssSelector, waitSecond)
+	if err != nil {
+		return nil, err
+	}
+	if len(elements) == 0 {
+		return nil, fmt.Errorf("can't find element by css selector:%s", cssSelector)
+	}
+	return elements[0], nil
 }
